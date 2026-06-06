@@ -1,0 +1,70 @@
+{
+  "name": "catlit-ttyd",
+  "version": "0.1.0",
+  "description": "A Lit web component that speaks ttyd's WebSocket protocol — embed a real terminal into any Lit-based UI.",
+  "type": "module",
+  "main": "./dist/catlit-ttyd.js",
+  "module": "./dist/catlit-ttyd.js",
+  "types": "./dist/catlit-ttyd.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/catlit-ttyd.d.ts",
+      "import": "./dist/catlit-ttyd.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "lit",
+    "web-components",
+    "ttyd",
+    "xterm",
+    "terminal",
+    "websocket",
+    "cli"
+  ],
+  "author": "SESP, Northwestern University",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sesptech/catlit-ttyd.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sesptech/catlit-ttyd/issues"
+  },
+  "homepage": "https://github.com/sesptech/catlit-ttyd#readme",
+  "peerDependencies": {
+    "lit": "^3.0.0"
+  },
+  "dependencies": {
+    "@xterm/addon-canvas": "^0.7.0",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/browser": "^4.1.0",
+    "happy-dom": "^20.10.0",
+    "lit": "^3.2.0",
+    "playwright": "^1.48.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0",
+    "vite-plugin-dts": "^4.3.0",
+    "vitest": "^4.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
