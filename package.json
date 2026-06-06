@@ -35,7 +35,7 @@
     "websocket",
     "cli"
   ],
-  "author": "SESP, Northwestern University",
+  "author": "Michael Hannen (SESP, Northwestern University)",
   "license": "MIT",
   "repository": {
     "type": "git",
