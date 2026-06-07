@@ -39,6 +39,7 @@ describe("catlit-ttyd property defaults", () => {
     expect(el.reconnectDelayMs).toBe(1000);
     expect(el.fontSize).toBe(14);
     expect(el.scrollback).toBe(5000);
+    expect(el.fontLoadTimeoutMs).toBe(1500);
     expect(el.cursorBlink).toBe(true);
     expect(el.acceptServerPreferences).toBe(false);
     expect(el.state).toBe("idle");
@@ -54,6 +55,15 @@ describe("catlit-ttyd attribute reflection", () => {
     await el.updateComplete;
     expect(el.wsUrl).toBe("/my/ws");
     expect(el.tokenUrl).toBe("/my/token");
+    document.body.removeChild(el);
+  });
+
+  it("reflects font-load-timeout-ms attribute", async () => {
+    const el = document.createElement("catlit-ttyd") as CatlitTtyd;
+    el.setAttribute("font-load-timeout-ms", "500");
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(el.fontLoadTimeoutMs).toBe(500);
     document.body.removeChild(el);
   });
 });

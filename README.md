@@ -82,6 +82,7 @@ route /terminal/ws /terminal/token {
 | `fontFamily` | `font-family` | string | Cascadia/Fira/system mono | Terminal typography. |
 | `fontSize` | `font-size` | number | `14` | Pixel size. |
 | `scrollback` | `scrollback` | number | `5000` | Lines kept in the buffer. |
+| `fontLoadTimeoutMs` | `font-load-timeout-ms` | number | `1500` | Max time to wait for the primary `fontFamily` to load before opening the terminal (see [Webfont loading](#webfont-loading) below). Set to `0` to skip the wait entirely. |
 | `cursorBlink` | `cursor-blink` | boolean | `true` | Cursor blink. |
 | `acceptServerPreferences` | `accept-server-preferences` | boolean | `false` | Apply ttyd's `SET_PREFERENCES` frames. Default off — the embedder typically owns theming. |
 
@@ -127,6 +128,34 @@ class BrandedTerminal extends CatlitTtyd {
   override fontFamily = "Iosevka, monospace";
 }
 customElements.define("branded-terminal", BrandedTerminal);
+```
+
+## Webfont loading
+
+If your `fontFamily` is a webfont (anything declared with `@font-face
+url(...)` rather than a system font), `<catlit-ttyd>` waits for that
+font to finish loading **before** calling xterm.js's `terminal.open()`.
+
+This is necessary because xterm.js measures glyph metrics synchronously
+at `open()` time and caches them in its renderer. If the webfont is
+still in flight, xterm.js measures against the fallback font, caches
+those metrics, and then the real font swaps in at the wrong cell width
+— visible as misaligned columns until a resize fires a refit. This is
+the canonical xterm.js webfont pitfall; the xterm.js team documents it
+in
+[`@xterm/addon-web-fonts`](https://github.com/xtermjs/xterm.js/blob/master/addons/addon-web-fonts/README.md).
+
+The wait is bounded by `fontLoadTimeoutMs` (default 1500ms) so a missing
+or 404'd font cannot hang the terminal indefinitely. If the timeout
+fires, `<catlit-ttyd>` opens the terminal with whatever font is
+currently available — "slightly misaligned text" is better than "no
+terminal at all."
+
+If you only use system fonts and want the legacy synchronous
+behaviour, set the attribute:
+
+```html
+<catlit-ttyd font-load-timeout-ms="0"></catlit-ttyd>
 ```
 
 ## Wire protocol

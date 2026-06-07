@@ -191,6 +191,19 @@ export class CatlitTtyd extends LitElement {
   @property({ type: Number })
   scrollback = 5000;
 
+  /** Milliseconds to wait for the configured webfont to load before
+   * opening the terminal. xterm.js measures glyph metrics synchronously
+   * in `terminal.open()`; if the font is still arriving over the network,
+   * it caches fallback metrics and the rendered grid ends up at the
+   * wrong cell width until something forces a refit. We wait for the
+   * primary font family in the stack to load (at both 400 and 700
+   * weights) before calling `open()`. The wait is bounded by this
+   * timeout so a missing or 404'd font cannot hang the terminal
+   * indefinitely. Set to 0 to disable the wait entirely (legacy /
+   * system-font-only consumers). Default: 1500ms. */
+  @property({ type: Number, attribute: "font-load-timeout-ms" })
+  fontLoadTimeoutMs = 1500;
+
   /** Whether the cursor blinks. */
   @property({ type: Boolean, attribute: "cursor-blink" })
   cursorBlink = true;
@@ -258,11 +271,54 @@ export class CatlitTtyd extends LitElement {
       ".term-host",
     ) as HTMLElement | null;
     if (!host) return;
+    void this.#initTerminal(host);
+  }
+
+  // Async initialization path: wait for the configured font to load
+  // before we let xterm.js measure glyph metrics in `terminal.open()`.
+  //
+  // Background: xterm.js measures the active font's glyph width
+  // synchronously the moment `terminal.open()` runs, and caches those
+  // metrics in its renderer. With a webfont that arrives over the
+  // network (any @font-face url(...) the consumer ships), the font is
+  // often still loading when `firstUpdated` fires. In that window,
+  // xterm.js measures against the FALLBACK font (Cascadia / Menlo /
+  // monospace / etc), caches those metrics, and then the real font
+  // swaps in at the wrong cell width — garbled columns until a refit.
+  // This is the canonical xterm.js webfont pitfall; the xterm.js team
+  // documents it in @xterm/addon-web-fonts.
+  //
+  // To avoid it, we resolve the configured fontFamily, ask the browser
+  // to load it (`document.fonts.load("<size> <family>")`) at our chosen
+  // size and both weights, and only then call `terminal.open(host)`.
+  // The `font-display: swap` semantics of the consumer's @font-face
+  // declarations still apply outside our component; inside it we hold
+  // off the renderer until the font is ready.
+  //
+  // The await is bounded by a short timeout so a missing or 404'd
+  // webfont can't permanently hang the terminal — we fall back to
+  // "open immediately" if the load is slow, on the theory that "slightly
+  // misaligned text" is better than "no terminal at all."
+  async #initTerminal(host: HTMLElement): Promise<void> {
+    const resolvedFontFamily = this.cssVarOr(
+      "--catlit-ttyd-font-family",
+      this.fontFamily,
+    );
+    const resolvedFontSize = this.cssVarNumberOr(
+      "--catlit-ttyd-font-size",
+      this.fontSize,
+    );
+
+    await this.#waitForFontsReady(resolvedFontFamily, resolvedFontSize);
+
+    // Re-check that the element is still attached — the user may have
+    // navigated away while we were waiting on fonts.
+    if (this.teardownInProgress || !this.isConnected) return;
 
     const termOptions: ITerminalOptions = {
       cursorBlink: this.cursorBlink,
-      fontFamily: this.cssVarOr("--catlit-ttyd-font-family", this.fontFamily),
-      fontSize: this.cssVarNumberOr("--catlit-ttyd-font-size", this.fontSize),
+      fontFamily: resolvedFontFamily,
+      fontSize: resolvedFontSize,
       scrollback: this.scrollback,
       theme: this.theme ?? {
         background: "#000000",
@@ -323,6 +379,62 @@ export class CatlitTtyd extends LitElement {
 
     // Kick off the connection.
     void this.refreshTokenAndConnect();
+  }
+
+  // Wait for the configured font to be available, with a short timeout.
+  // Resolves once the primary family in the stack is loaded at both the
+  // regular (400) and bold (700) weights, OR the timeout fires, whichever
+  // comes first. Either branch is safe: if the font loaded, xterm.js will
+  // measure its metrics correctly; if the timeout fired, xterm.js will
+  // measure the fallback and we accept the slight misalignment rather
+  // than hang the UI on a slow/missing font load.
+  async #waitForFontsReady(
+    fontFamily: string,
+    fontSize: number,
+  ): Promise<void> {
+    if (typeof document === "undefined" || !document.fonts) return;
+    const timeoutMs = this.fontLoadTimeoutMs;
+    if (timeoutMs <= 0) return;
+
+    // Extract the FIRST family from the comma-separated stack. xterm.js
+    // uses the first available family for its metric measurement, so
+    // that's what we need ready before `open()`.
+    const primary = this.#firstFontFamily(fontFamily);
+    if (!primary) return;
+    const loadAt = (weight: string) =>
+      document.fonts.load(`${weight} ${fontSize}px ${primary}`);
+
+    let timeoutId: number | undefined;
+    const timeout = new Promise<void>((resolve) => {
+      timeoutId = window.setTimeout(resolve, timeoutMs);
+    });
+
+    try {
+      await Promise.race([
+        Promise.all([loadAt("400"), loadAt("700")]).then(() => undefined),
+        timeout,
+      ]);
+    } catch {
+      // FontFaceSet.load() rejects if the family is unknown; that's
+      // fine, we'll fall through to xterm.js with the fallback font.
+    } finally {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    }
+  }
+
+  // Parse the first family from a CSS font-family stack. Handles both
+  // quoted ('"Monaspace Neon NF", monospace') and unquoted
+  // ('Menlo, monospace') stacks. Returns the family name with surrounding
+  // whitespace and outer quotes stripped, suitable for plugging into a
+  // `document.fonts.load()` shorthand string.
+  #firstFontFamily(stack: string): string | null {
+    const first = stack.split(",")[0]?.trim();
+    if (!first) return null;
+    // Strip outer matching quotes if present.
+    const m = /^(['"])(.*)\1$/.exec(first);
+    const unquoted = m ? m[2] : first;
+    // Re-quote for the font shorthand so multi-word family names parse.
+    return `"${unquoted.replace(/"/g, '\\"')}"`;
   }
 
   override disconnectedCallback(): void {
