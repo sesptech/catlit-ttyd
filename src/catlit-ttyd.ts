@@ -57,6 +57,7 @@ import { Terminal, type ITerminalOptions, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { ClipboardAddon } from "@xterm/addon-clipboard";
 import xtermCss from "@xterm/xterm/css/xterm.css?inline";
 
 // ── Wire protocol constants ─────────────────────────────────────────
@@ -212,6 +213,7 @@ export class CatlitTtyd extends LitElement {
   private fitAddon: FitAddon | null = null;
   private canvasAddon: CanvasAddon | null = null;
   private webLinksAddon: WebLinksAddon | null = null;
+  private clipboardAddon: ClipboardAddon | null = null;
 
   private socket: WebSocket | null = null;
   private token = "";
@@ -276,9 +278,14 @@ export class CatlitTtyd extends LitElement {
     this.fitAddon = new FitAddon();
     this.canvasAddon = new CanvasAddon();
     this.webLinksAddon = new WebLinksAddon();
+    // ClipboardAddon wires OSC 52 to navigator.clipboard.writeText().
+    // Without it, xterm.js silently drops OSC 52 sequences, so server-side
+    // tmux `set-clipboard on` has no effect on the browser clipboard.
+    this.clipboardAddon = new ClipboardAddon();
 
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.webLinksAddon);
+    this.terminal.loadAddon(this.clipboardAddon);
     this.terminal.open(host);
 
     // CanvasAddon must be loaded after open() — it inspects the

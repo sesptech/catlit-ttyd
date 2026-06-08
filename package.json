@@ -1,6 +1,6 @@
 {
   "name": "@sesptech/catlit-ttyd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A Lit web component that speaks ttyd's WebSocket protocol — embed a real terminal into any Lit-based UI.",
   "type": "module",
   "main": "./dist/catlit-ttyd.js",
@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@xterm/addon-canvas": "^0.7.0",
+    "@xterm/addon-clipboard": "^0.2.0",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0"
