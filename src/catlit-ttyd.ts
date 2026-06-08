@@ -308,6 +308,13 @@ export class CatlitTtyd extends LitElement {
         foreground: "#e8e0f5",
         cursor: "#9f7ae9",
       },
+      // Automatically write the selected text to the system clipboard when
+      // the user finishes a drag-select. Works via the ClipboardAddon's OSC 52
+      // write path — xterm.js emits an OSC 52 sequence on selection, which the
+      // addon forwards to navigator.clipboard.writeText(). Without this, users
+      // must manually Cmd/Ctrl+C after selecting, which is surprising for a
+      // terminal emulator.
+      copyOnSelect: true,
       allowProposedApi: true,
     };
 
