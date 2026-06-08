@@ -308,13 +308,6 @@ export class CatlitTtyd extends LitElement {
         foreground: "#e8e0f5",
         cursor: "#9f7ae9",
       },
-      // Automatically write the selected text to the system clipboard when
-      // the user finishes a drag-select. Works via the ClipboardAddon's OSC 52
-      // write path — xterm.js emits an OSC 52 sequence on selection, which the
-      // addon forwards to navigator.clipboard.writeText(). Without this, users
-      // must manually Cmd/Ctrl+C after selecting, which is surprising for a
-      // terminal emulator.
-      copyOnSelect: true,
       allowProposedApi: true,
     };
 
@@ -360,9 +353,32 @@ export class CatlitTtyd extends LitElement {
     const resizeDisp = this.terminal.onResize(({ cols, rows }) =>
       this.sendResize(cols, rows),
     );
+
+    // Copy-on-select: write the selected text to the system clipboard whenever
+    // the selection changes and there is a non-empty selection. This mirrors
+    // the behaviour of most terminal emulators (iTerm2, GNOME Terminal, etc).
+    //
+    // We call navigator.clipboard.writeText() directly rather than relying on
+    // an OSC 52 round-trip because the terminal has focus at this point
+    // (the user just finished dragging), satisfying the browser's
+    // "document must be focused" requirement for the Clipboard API.
+    const selDisp = this.terminal.onSelectionChange(() => {
+      if (this.terminal?.hasSelection()) {
+        const text = this.terminal.getSelection();
+        if (text) {
+          navigator.clipboard.writeText(text).catch(() => {
+            // Clipboard write can fail if the document loses focus between
+            // the selection event and the async write (e.g. user Alt+Tabs).
+            // Silently ignore — the user can still copy with Cmd/Ctrl+C.
+          });
+        }
+      }
+    });
+
     this.terminalDisposers.push(
       () => dataDisp.dispose(),
       () => resizeDisp.dispose(),
+      () => selDisp.dispose(),
     );
 
     // Refit on container resize (sidebar collapse, viewport changes,
