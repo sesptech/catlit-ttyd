@@ -1,7 +1,7 @@
 {
   "name": "@sesptech/catlit-ttyd",
-  "version": "0.2.0",
-  "description": "A Lit web component that speaks ttyd's WebSocket protocol — embed a real terminal into any Lit-based UI.",
+  "version": "0.3.0",
+  "description": "A Lit web component that speaks ttyd's WebSocket protocol \u2014 embed a real terminal into any Lit-based UI.",
   "type": "module",
   "main": "./dist/catlit-ttyd.js",
   "module": "./dist/catlit-ttyd.js",
