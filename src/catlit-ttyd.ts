@@ -57,7 +57,44 @@ import { Terminal, type ITerminalOptions, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { ClipboardAddon } from "@xterm/addon-clipboard";
+import {
+  ClipboardAddon,
+  BrowserClipboardProvider,
+  type IClipboardProvider,
+  type ClipboardSelectionType,
+} from "@xterm/addon-clipboard";
+
+/**
+ * Write-only clipboard provider.
+ *
+ * Wraps BrowserClipboardProvider's writeText() so OSC 52 *write*
+ * sequences from the terminal land in navigator.clipboard. Returns an
+ * empty string for readText() so OSC 52 *read* queries from the
+ * terminal cannot exfiltrate the user's clipboard.
+ *
+ * Why: any process running inside the terminal (a curl'd script, a
+ * compromised CLI, a vim plugin) can emit OSC 52 read queries. The
+ * default BrowserClipboardProvider would respond by calling
+ * navigator.clipboard.readText() — which (a) prompts the user for
+ * clipboard read permission in some browsers, surprising them, and
+ * (b) on grant, injects clipboard contents into the terminal stream
+ * as if typed. For a terminal embedded in a browser-based dev shell
+ * the clipboard-read path is more risk than value: tmux's own paste
+ * (Ctrl+B ]) uses the browser keystroke path, not OSC 52 read.
+ */
+class WriteOnlyClipboardProvider implements IClipboardProvider {
+  #inner = new BrowserClipboardProvider();
+
+  readText(_selection: ClipboardSelectionType): Promise<string> {
+    // Silently refuse. Returning '' rather than rejecting keeps the
+    // addon's internal flow simple — the terminal sees an empty paste.
+    return Promise.resolve("");
+  }
+
+  writeText(selection: ClipboardSelectionType, data: string): Promise<void> {
+    return this.#inner.writeText(selection, data);
+  }
+}
 import xtermCss from "@xterm/xterm/css/xterm.css?inline";
 
 // ── Wire protocol constants ─────────────────────────────────────────
@@ -281,7 +318,14 @@ export class CatlitTtyd extends LitElement {
     // ClipboardAddon wires OSC 52 to navigator.clipboard.writeText().
     // Without it, xterm.js silently drops OSC 52 sequences, so server-side
     // tmux `set-clipboard on` has no effect on the browser clipboard.
-    this.clipboardAddon = new ClipboardAddon();
+    //
+    // We pass a write-only provider (see WriteOnlyClipboardProvider above)
+    // so OSC 52 reads cannot exfiltrate the user's clipboard from inside
+    // the terminal. The base64 codec is left as the addon's default.
+    this.clipboardAddon = new ClipboardAddon(
+      undefined,
+      new WriteOnlyClipboardProvider(),
+    );
 
     this.terminal.loadAddon(this.fitAddon);
     this.terminal.loadAddon(this.webLinksAddon);
