@@ -57,32 +57,3 @@ describe("catlit-ttyd attribute reflection", () => {
     document.body.removeChild(el);
   });
 });
-
-describe("catlit-ttyd keyboard paste shortcut detection", () => {
-  it("matches Ctrl+V on non-mac", () => {
-    const el = document.createElement("catlit-ttyd") as CatlitTtyd;
-    (el as any).isMacPlatform = false;
-
-    const ev = new KeyboardEvent("keydown", { key: "v", ctrlKey: true });
-    expect((el as any).isKeyboardPasteShortcut(ev)).toBe(true);
-  });
-
-  it("matches Cmd+V on mac and ignores Ctrl+V", () => {
-    const el = document.createElement("catlit-ttyd") as CatlitTtyd;
-    (el as any).isMacPlatform = true;
-
-    const cmdPaste = new KeyboardEvent("keydown", { key: "v", metaKey: true });
-    const ctrlV = new KeyboardEvent("keydown", { key: "v", ctrlKey: true });
-
-    expect((el as any).isKeyboardPasteShortcut(cmdPaste)).toBe(true);
-    expect((el as any).isKeyboardPasteShortcut(ctrlV)).toBe(false);
-  });
-
-  it("does not treat Alt+V as paste", () => {
-    const el = document.createElement("catlit-ttyd") as CatlitTtyd;
-    (el as any).isMacPlatform = false;
-
-    const ev = new KeyboardEvent("keydown", { key: "v", ctrlKey: true, altKey: true });
-    expect((el as any).isKeyboardPasteShortcut(ev)).toBe(false);
-  });
-});

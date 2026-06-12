@@ -266,9 +266,6 @@ export class CatlitTtyd extends LitElement {
   // Set true on disconnectedCallback to suppress lingering reconnect
   // timers from firing after the element is gone.
   private teardownInProgress = false;
-  private readonly isMacPlatform = /\bMac|iPhone|iPad|iPod\b/i.test(
-    navigator.platform || navigator.userAgent,
-  );
 
   static styles = css`
     :host {
@@ -315,13 +312,6 @@ export class CatlitTtyd extends LitElement {
     };
 
     this.terminal = new Terminal(termOptions);
-    this.terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      // Keep keyboard paste on the native browser/xterm paste event path.
-      // Returning false here skips xterm's key processing for Cmd/Ctrl+V
-      // so paste text is inserted once instead of via dual paths.
-      if (!this.isKeyboardPasteShortcut(event)) return true;
-      return false;
-    });
     this.fitAddon = new FitAddon();
     this.canvasAddon = new CanvasAddon();
     this.webLinksAddon = new WebLinksAddon();
@@ -675,13 +665,6 @@ export class CatlitTtyd extends LitElement {
     const sock = this.socket;
     if (!sock || sock.readyState !== WebSocket.OPEN) return;
     sock.send(this.textEncoder.encode(cmd));
-  }
-
-  private isKeyboardPasteShortcut(event: KeyboardEvent): boolean {
-    if (event.type !== "keydown") return false;
-    if (event.altKey) return false;
-    if (event.key.toLowerCase() !== "v") return false;
-    return this.isMacPlatform ? event.metaKey : event.ctrlKey;
   }
 
   // ── Helpers ───────────────────────────────────────────────────────
