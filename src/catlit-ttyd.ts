@@ -99,6 +99,12 @@ import xtermCss from "@xterm/xterm/css/xterm.css?inline";
 
 // ── Wire protocol constants ─────────────────────────────────────────
 
+const DEFAULT_THEME: ITheme = {
+  background: "#000000",
+  foreground: "#e8e0f5",
+  cursor: "#9f7ae9",
+};
+
 const enum ServerCmd {
   OUTPUT = 0x30, // '0'
   SET_WINDOW_TITLE = 0x31, // '1'
@@ -306,11 +312,7 @@ export class CatlitTtyd extends LitElement {
       fontFamily: this.cssVarOr("--catlit-ttyd-font-family", this.fontFamily),
       fontSize: this.cssVarNumberOr("--catlit-ttyd-font-size", this.fontSize),
       scrollback: this.scrollback,
-      theme: this.theme ?? {
-        background: "#000000",
-        foreground: "#e8e0f5",
-        cursor: "#9f7ae9",
-      },
+      theme: this.theme ?? DEFAULT_THEME,
       allowProposedApi: true,
     };
 
@@ -407,6 +409,12 @@ export class CatlitTtyd extends LitElement {
 
     // Kick off the connection.
     void this.refreshTokenAndConnect();
+  }
+
+  override updated(changed: PropertyValues): void {
+    if (changed.has("theme") && this.terminal) {
+      this.terminal.options.theme = this.theme ?? DEFAULT_THEME;
+    }
   }
 
   override disconnectedCallback(): void {
