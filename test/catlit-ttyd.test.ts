@@ -45,6 +45,27 @@ describe("catlit-ttyd property defaults", () => {
   });
 });
 
+describe("catlit-ttyd theme updates", () => {
+  it("updates the mounted renderer without replacing it or its connection", () => {
+    const el = document.createElement("catlit-ttyd") as CatlitTtyd;
+    const dark = { background: "#141414", foreground: "#ededed" };
+    const light = { background: "#fafafa", foreground: "#262626" };
+    const terminal = { options: { theme: dark } };
+    const socket = {};
+    Object.assign(el, { terminal, socket });
+
+    el.theme = light;
+    el.updated(new Map([["theme", dark]]));
+    expect(terminal.options.theme).toBe(light);
+    expect(el).toHaveProperty("terminal", terminal);
+    expect(el).toHaveProperty("socket", socket);
+
+    el.theme = undefined;
+    el.updated(new Map([["theme", light]]));
+    expect(terminal.options.theme).toMatchObject({ background: "#000000" });
+  });
+});
+
 describe("catlit-ttyd attribute reflection", () => {
   it("reads ws-url and token-url from attributes", async () => {
     const el = document.createElement("catlit-ttyd") as CatlitTtyd;
